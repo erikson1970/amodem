@@ -27,6 +27,12 @@ class Configuration:
         self.sample_size = self.bits_per_sample // 8
         assert self.sample_size * 8 == self.bits_per_sample
 
+        self.block_size = 250
+        self.flags = 0x00
+        self.noiseModelStr = '0.0,0.0,-1.0'
+        self.noiseModel = [float(i) for i in self.noiseModelStr.split(",")]
+        self.fec = 'none'
+        self.stopOnCode = 0xff
         self.Ts = 1.0 / self.Fs
         self.Fsym = 1 / self.Tsym
         self.Nsym = int(self.Tsym / self.Ts)

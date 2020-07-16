@@ -109,7 +109,7 @@ def wrap(cls, stream, enable):
     return cls(stream) if enable else stream
 
 
-def create_parser(description, interface_factory):
+def create_parser(description, interface_factory, conf):
     p = argparse.ArgumentParser(description=description)
     subparsers = p.add_subparsers()
 
@@ -125,15 +125,22 @@ def create_parser(description, interface_factory):
         '-g', '--gain', type=float, default=1.0,
         help='Modulator gain (defaults to 1)')
     sender.add_argument(
+        '-f', '--fec', default='none', choices=['none', 'low', 'med', 'high'],
+        help='Forward Error Correction (defaults to none)')
+    sender.add_argument(
+        '-n', '--noise', default=conf.noiseModelStr,
+        help='Add Noise to sender AWGN STDEV / SHOT Ns STDEV / SHOT' +
+        ' Lambda (defaults to 0.0/0.0/-1.0 - no noise)')
+    sender.add_argument(
         '--silence', type=float, default=0.0,
         help='Extra silence before sending the data (in seconds)')
     sender.set_defaults(
-        main=lambda config, args: main.send(
-            config, src=wrap(Compressor, args.src, args.zlib), dst=args.dst,
-            gain=args.gain, extra_silence=args.silence
+        main=lambda confi, args: main.send(
+            config=confi, src=wrap(Compressor, args.src, args.zlib),
+            dst=args.dst, gain=args.gain, extra_silence=args.silence
         ),
-        calib=lambda config, args: calib.send(
-            config=config, dst=args.dst,
+        calib=lambda confi, args: calib.send(
+            config=confi, dst=args.dst,
             volume_cmd=get_volume_cmd(args)
         ),
         input_type=FileType('rb'),
@@ -149,8 +156,6 @@ def create_parser(description, interface_factory):
     receiver.add_argument(
         '-o', '--output', help='output file (use "-" for stdout).')
     receiver.add_argument(
-        '-f', '--fault-tolerance', help='fault tolerance level [1]')
-    receiver.add_argument(
         '-d', '--dump', type=FileType('wb'),
         help='Filename to save recorded audio')
     receiver.add_argument(
@@ -163,12 +168,12 @@ def create_parser(description, interface_factory):
         '--plot', action='store_true', default=False,
         help='plot results using pylab module')
     receiver.set_defaults(
-        main=lambda config, args: main.recv(
-            config, src=args.src, dst=wrap(Decompressor, args.dst, args.zlib),
-            pylab=args.pylab, dump_audio=args.dump, stopOnCode=args.stopcode,
-        ),
-        calib=lambda config, args: calib.recv(
-            config=config, src=args.src, verbose=args.verbose,
+        main=lambda confi, args: main.recv(
+            config=confi, src=args.src, dst=wrap(Decompressor, args.dst,
+                                                 args.zlib),
+            pylab=args.pylab, dump_audio=args.dump),
+        calib=lambda confi, args: calib.recv(
+            config=confi, src=args.src, verbose=args.verbose,
             volume_cmd=get_volume_cmd(args)
         ),
         input_type=FileType('rb', interface_factory),
@@ -234,7 +239,7 @@ def _main():
     def interface_factory():
         return interface
 
-    p = create_parser(description, interface_factory)
+    p = create_parser(description, interface_factory, config)
 
     args = p.parse_args()
     _config_log(args)
@@ -244,11 +249,19 @@ def _main():
 
     args.pylab = None
     if getattr(args, 'plot', False):
-        import pylab  # pylint: disable=import-error,import-outside-toplevel
+        import pylab    # pylint: disable=import-error,import-outside-toplevel
         args.pylab = pylab
 
+    if args.noise != config.noiseModelStr:
+        config.noiseModel = [float(i) for i in args.noise.split(",")]
+
+    if args.fec != 'none':
+        config.fec = args.fec
+
+    config.stopOnCode = args.stopcode
+
     if args.audio_library == 'ALSA':
-        from . import alsa  # pylint: disable=import-outside-toplevel
+        from . import alsa    # pylint: disable=import-outside-toplevel
         interface = alsa.Interface(config)
     elif args.audio_library == '-':
         interface = _Dummy()  # manually disable PortAudio
