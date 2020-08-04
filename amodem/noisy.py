@@ -14,8 +14,8 @@ class Noisy:
         self.aggFunc = aggFunc or self._aggFunc
 
     # pylint: disable=too-many-arguments
-    def shotIndices(self, shotL=4.0, start=0, cnt=-1, groupSpan=-1,
-                    aggFunc=None):
+    def shotIndices(self, shotL=4.0, start=0, cnt=-1,
+                    groupSpan=-1, aggFunc=None):
         """Makes Lists of indices for injecting shot noise into signal """
         shotbatch = 20
         myaggFunc = aggFunc or self.aggFunc
@@ -52,19 +52,21 @@ class Noisy:
                 yield myaggFunc(span[0])
         return 0
 
-    def noisemaker(
-            self, norm_stdev=1.0, shot_stdev=1.0, shotlambda=-1.0,
-            batchSize=32, count=-1, aggFunc=None):
+    def noisemaker(self, norm_stdev=1.0, shot_stdev=1.0, shotlambda=-1.0,
+                   batchSize=32, count=-1, aggFunc=None):
         """Creates AWGN with shot noise(optionally)"""
 
         if shotlambda > 0:
             if aggFunc:
                 shotGen = self.shotIndices(
-                    shotL=shotlambda, groupSpan=batchSize, aggFunc=aggFunc)
+                    shotL=shotlambda, groupSpan=batchSize, aggFunc=aggFunc
+                )
             else:
                 shotGen = self.shotIndices(
-                    shotL=shotlambda, groupSpan=batchSize,
-                    aggFunc=lambda x: x % batchSize)
+                    shotL=shotlambda,
+                    groupSpan=batchSize,
+                    aggFunc=lambda x: x % batchSize,
+                )
         else:
             shotGen = None
         while count != 0:
@@ -78,14 +80,14 @@ class Noisy:
         return count
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":              # pragma: no cover
     # pylint: disable=import-error,import-outside-toplevel
     import pylab as plt
+
     n = Noisy()
     fig2 = plt.figure(figsize=(10, 6))
-    ssss = n.noisemaker(
-        norm_stdev=0.125, shot_stdev=1.0, shotlambda=20.0,
-        batchSize=512, count=5)
+    ssss = n.noisemaker(norm_stdev=0.125, shot_stdev=1.0, shotlambda=120.0,
+                        batchSize=512, count=5)
     for i, sss in enumerate(ssss):
         plt.plot(
             sss + 10 * (i), "-", label="Slice {}".format(i),

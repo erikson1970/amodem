@@ -20,6 +20,14 @@ def test_checksum():
         assert c.decode(c.encode(data)) == data
 
 
+def test_header_checksum_error():
+    f = framing.Framer(block_size=7)
+    encoded14 = concat(f.encode(b"123456789012345678901"))
+    encoded14[framing.struct.calcsize(f.prefix_fmt[:-1])] ^= 0xff
+    with pytest.raises(ValueError):
+        concat(f.decode(encoded14))
+
+
 def test_framer():
     for data in data_fixture_params:
         f = framing.Framer()

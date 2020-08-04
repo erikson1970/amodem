@@ -102,6 +102,7 @@ class Framer:
             pre_chk = _short_checksum_func(
                 struct.pack(self.prefix_fmt[:-1], cnt, flag, length)
             )
+            # Calc Checksum of header
             if pre_chk != mychecksum:
                 errMSG = "Frame %d %s checksum:%02x != calc checksum:%02x" % (
                     cnt,
@@ -115,11 +116,7 @@ class Framer:
 
             if cnt != local_cnt or (prior_cnt >= 0 and cnt != prior_cnt + 1):
                 errMSG = "Frame %d %s error. Msg cnt %d, Prior Msg cnt %d" % (
-                    local_cnt,
-                    "Sequence counting",
-                    cnt,
-                    prior_cnt,
-                )
+                    local_cnt, "Sequence counting", cnt, prior_cnt)
                 log.warning(errMSG)
                 if bool(self.fTOL & StopOnFault.SEQUENCE_ERR):
                     raise ValueError(errMSG)
